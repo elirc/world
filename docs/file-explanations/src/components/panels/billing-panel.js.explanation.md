@@ -1,16 +1,10 @@
 # Senior Engineering Explanation: `src/components/panels/billing-panel.js`
 
 ## Ownership and Intent
-This file provides UI behavior in the client layer. It coordinates user interactions, local state transitions, and API command dispatch while intentionally keeping core business rules in backend services.
+This file implements user interaction behavior in the client layer, translating UI events into backend commands and reflecting asynchronous state.
 
 ## How the Implementation Works
-The implementation follows a clear separation of concerns and keeps responsibilities explicit.
-
-The component uses event-driven handlers to translate user actions into API commands. UI state (pending/error/feedback) is managed close to interaction points for responsive operator experience without leaking backend implementation details into rendering primitives.
-
-Key dependencies imported here indicate coupling points: react, next/navigation.
-
-Primary exported entry points: BillingPanel.
+The file is structured around explicit module responsibilities and clear entry points. Import dependencies define collaboration boundaries, while exported symbols provide the public contract consumed by other layers.
 
 Detected imports:
 - react
@@ -19,21 +13,42 @@ Detected imports:
 Detected exports / entry points:
 - BillingPanel
 
+
+
+## Code-Level Structure
+Approximate line count: 94
+
+Top-level declarations (module/global scope candidates):
+- None detected in this file.
+
+Function-level structure:
+- BillingPanel({ plans, invoices }) -> function declaration, exported
+
+## Scope and State Model
+Scope analysis:
+- Scope usage is conventional: constants and helpers in module scope, request-specific values inside function scope.
+
+State concepts observed:
+- React local component state (`useState`)
+- React transition state for async UI updates
+
+## Control Flow and Side Effects
+Control-flow profile:
+- Conditional branching is used to encode domain/path logic (if-count approx: 1).
+
+Observed side effects:
+- network I/O via HTTP fetch
+
 ## Why It Is Implemented This Way
-Design choices in this file favor maintainability over short-term convenience. The code is structured so that behavior changes can be made in one layer without causing cascading edits across unrelated modules.
+Design choices in this file prioritize explicit contracts, predictable side effects, and maintainable layering. This helps the team evolve behavior without hidden coupling.
 
-Cross-cutting concerns currently visible in this file include: client-side state orchestration, UI-to-API command flow.
-
-The component deliberately delegates authoritative validation to backend services while still giving users immediate feedback. This avoids front-end/back-end rule drift and keeps security-sensitive logic server-side.
-
-## Operational and Maintenance Considerations
-This file currently has approximately 94 lines, which is manageable but should still be monitored for responsibility creep.
-
-Operationally, future changes should preserve backward-compatible behavior at public interfaces (routes, exported service functions, and schema contracts).
+Cross-cutting concerns currently present:
+- client-side state orchestration
+- UI-to-API command flow
 
 ## Safe Extension Guidance
-- 1. Add or change behavior in the owning layer only; avoid bypassing abstractions for convenience.
-- 2. Keep input/output contracts explicit and update validators/types/route expectations together.
-- 3. Preserve auditability for mutating workflows; if data changes materially, record who/when/what changed.
-- 4. Add regression coverage (or at minimum reproducible manual verification steps) for critical workflow paths.
-- 5. Keep optimistic UI behavior conservative unless backend idempotency guarantees are explicit.
+- Keep business rules in the owning layer (service layer for domain policy, route layer for transport policy, UI layer for interaction policy).
+- Preserve existing exported contracts when possible; when changes are required, update all call sites in the same change set.
+- Keep module-scope mutable state minimal and intentional; prefer explicit factories for complex lifecycle state.
+- For stateful UI files, keep pending/error/success transitions explicit and deterministic.
+- For backend files with side effects, maintain idempotency and transactional coherence to avoid partial writes.

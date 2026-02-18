@@ -1,18 +1,10 @@
 # Senior Engineering Explanation: `src/app/api/auth/me/route.js`
 
 ## Ownership and Intent
-This file defines an HTTP boundary in the application layer. Its primary job is to accept request input, enforce authentication and authorization constraints, and delegate business behavior to the service layer without embedding domain rules directly in the route handler.
+This file defines an HTTP boundary in the application layer. It should remain transport-focused: auth, validation, and delegation to domain services.
 
 ## How the Implementation Works
-The implementation follows a clear separation of concerns and keeps responsibilities explicit.
-
-At runtime, the route handler validates request context and input shape before invoking service-layer functions. This protects domain services from malformed transport data and keeps HTTP concerns (status, response shape) localized to the route layer.
-
-The route currently exposes the following HTTP methods: GET.
-
-Key dependencies imported here indicate coupling points: @/lib/api.
-
-Primary exported entry points: GET.
+The file is structured around explicit module responsibilities and clear entry points. Import dependencies define collaboration boundaries, while exported symbols provide the public contract consumed by other layers.
 
 Detected imports:
 - @/lib/api
@@ -23,23 +15,39 @@ Detected exports / entry points:
 Detected API methods:
 - GET
 
+
+## Code-Level Structure
+Approximate line count: 8
+
+Top-level declarations (module/global scope candidates):
+- None detected in this file.
+
+Function-level structure:
+- None detected in this file.
+
+## Scope and State Model
+Scope analysis:
+- Scope usage is conventional: constants and helpers in module scope, request-specific values inside function scope.
+
+State concepts observed:
+- None detected in this file.
+
+## Control Flow and Side Effects
+Control-flow profile:
+- Control flow is mostly linear and declarative in this file.
+
+Observed side effects:
+- no major external side effects detected
+
 ## Why It Is Implemented This Way
-Design choices in this file favor maintainability over short-term convenience. The code is structured so that behavior changes can be made in one layer without causing cascading edits across unrelated modules.
+Design choices in this file prioritize explicit contracts, predictable side effects, and maintainable layering. This helps the team evolve behavior without hidden coupling.
 
-Cross-cutting concerns currently visible in this file include: route-level auth/permission validation.
-
-Keeping route handlers thin prevents transport-layer code from accumulating hidden business rules. This improves testability and makes incident triage faster because domain behavior is concentrated in service modules.
-
-## Operational and Maintenance Considerations
-This file currently has approximately 8 lines, which is manageable but should still be monitored for responsibility creep.
-
-Operationally, future changes should preserve backward-compatible behavior at public interfaces (routes, exported service functions, and schema contracts).
-
-When modifying this route, keep error shapes and status semantics stable so calling clients do not break unexpectedly.
+Cross-cutting concerns currently present:
+- route-level auth/permission validation
 
 ## Safe Extension Guidance
-- 1. Add or change behavior in the owning layer only; avoid bypassing abstractions for convenience.
-- 2. Keep input/output contracts explicit and update validators/types/route expectations together.
-- 3. Preserve auditability for mutating workflows; if data changes materially, record who/when/what changed.
-- 4. Add regression coverage (or at minimum reproducible manual verification steps) for critical workflow paths.
-- 5. Prefer calling existing services over implementing business logic directly in the route handler.
+- Keep business rules in the owning layer (service layer for domain policy, route layer for transport policy, UI layer for interaction policy).
+- Preserve existing exported contracts when possible; when changes are required, update all call sites in the same change set.
+- Keep module-scope mutable state minimal and intentional; prefer explicit factories for complex lifecycle state.
+- For stateful UI files, keep pending/error/success transitions explicit and deterministic.
+- For backend files with side effects, maintain idempotency and transactional coherence to avoid partial writes.

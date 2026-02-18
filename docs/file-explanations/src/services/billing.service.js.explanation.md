@@ -1,18 +1,10 @@
 # Senior Engineering Explanation: `src/services/billing.service.js`
 
 ## Ownership and Intent
-This file owns business logic for a bounded domain concern. It is designed to be invoked by routes and potentially background workers, so it centralizes invariants, transaction boundaries, and cross-cutting side effects such as audit logging and domain event publication.
+This file owns core domain behavior. It is where business invariants, transaction boundaries, and side effects must be coordinated coherently.
 
 ## How the Implementation Works
-The implementation follows a clear separation of concerns and keeps responsibilities explicit.
-
-The service module centralizes domain invariants and transaction scope. Mutating flows are intentionally grouped so persistence changes, audit entries, and domain events can be committed atomically when needed.
-
-This is the right place to evolve policy rules because callers (API routes or workers) should not duplicate domain logic.
-
-Key dependencies imported here indicate coupling points: date-fns, @/lib/db, @/services/context, @/lib/audit.
-
-Primary exported entry points: listPricingPlans, listInvoices, generateMonthlyInvoice.
+The file is structured around explicit module responsibilities and clear entry points. Import dependencies define collaboration boundaries, while exported symbols provide the public contract consumed by other layers.
 
 Detected imports:
 - date-fns
@@ -25,23 +17,44 @@ Detected exports / entry points:
 - listInvoices
 - generateMonthlyInvoice
 
+
+
+## Code-Level Structure
+Approximate line count: 115
+
+Top-level declarations (module/global scope candidates):
+- None detected in this file.
+
+Function-level structure:
+- async listPricingPlans() -> function declaration, exported
+- async listInvoices(user, organizationId = null) -> function declaration, exported
+- async generateMonthlyInvoice(user, payload = {}, requestMeta = {}) -> function declaration, exported
+
+## Scope and State Model
+Scope analysis:
+- Scope usage is conventional: constants and helpers in module scope, request-specific values inside function scope.
+
+State concepts observed:
+- None detected in this file.
+
+## Control Flow and Side Effects
+Control-flow profile:
+- Control flow is mostly linear and declarative in this file.
+
+Observed side effects:
+- database I/O through Prisma
+
 ## Why It Is Implemented This Way
-Design choices in this file favor maintainability over short-term convenience. The code is structured so that behavior changes can be made in one layer without causing cascading edits across unrelated modules.
+Design choices in this file prioritize explicit contracts, predictable side effects, and maintainable layering. This helps the team evolve behavior without hidden coupling.
 
-Cross-cutting concerns currently visible in this file include: transactional consistency, audit logging, money math using minor units.
-
-The service-first pattern enables consistent business outcomes regardless of invocation source (UI, admin tools, scheduled workers, or future integrations). This is a critical scaling property for enterprise workflows.
-
-## Operational and Maintenance Considerations
-This file currently has approximately 115 lines, which is manageable but should still be monitored for responsibility creep.
-
-Operationally, future changes should preserve backward-compatible behavior at public interfaces (routes, exported service functions, and schema contracts).
-
-When introducing new side effects, ensure they remain transactional or explicitly compensatable. Partial writes across core HR/payroll flows create expensive reconciliation work.
+Cross-cutting concerns currently present:
+- transactional consistency
+- audit logging
+- money math using minor units
 
 ## Safe Extension Guidance
-- 1. Add or change behavior in the owning layer only; avoid bypassing abstractions for convenience.
-- 2. Keep input/output contracts explicit and update validators/types/route expectations together.
-- 3. Preserve auditability for mutating workflows; if data changes materially, record who/when/what changed.
-- 4. Add regression coverage (or at minimum reproducible manual verification steps) for critical workflow paths.
-- 5. Maintain idempotency and clear transaction boundaries for workflows that can be retried.
+- Keep business rules in the owning layer (service layer for domain policy, route layer for transport policy, UI layer for interaction policy).
+- Preserve existing exported contracts when possible; when changes are required, update all call sites in the same change set.
+- Keep module-scope mutable state minimal and intentional; prefer explicit factories for complex lifecycle state.
+- For stateful UI files, keep pending/error/success transitions explicit and deterministic.
+- For backend files with side effects, maintain idempotency and transactional coherence to avoid partial writes.

@@ -2,7 +2,7 @@
 
 Generated explanation companions: 120
 
-Each file in this repository has a mirrored explanation document under this folder.
+Each tracked file has a mirrored explanation document in this folder.
 
 - [.gitignore](./.gitignore.explanation.md)
 - [README.md](./README.md.explanation.md)
