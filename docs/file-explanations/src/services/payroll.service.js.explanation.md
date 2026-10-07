@@ -88,3 +88,17 @@ Cross-cutting concerns currently present:
 - Keep module-scope mutable state minimal and intentional; prefer explicit factories for complex lifecycle state.
 - For stateful UI files, keep pending/error/success transitions explicit and deterministic.
 - For backend files with side effects, maintain idempotency and transactional coherence to avoid partial writes.
+
+## Verified Review Notes (read against the current source)
+
+The sections above are generated from the file's structure. These notes come from reading the code line by line:
+
+- **State machine not enforced.** `calculatePayrollRun` (`:254-523`), `approvePayrollRun` (`:525-568`) and `processPayrollRun` (`:570-655`) never compare `run.status` with an expected value before writing. Recalculating a completed run resets `PAID` items to `CALCULATED` (`:380-399`).
+- **Reads outside the transaction.** `loadCurrentCompensation` (`:86-99`) and `loadYtd` (`:101-128`) use the global `db` client although they are called inside `db.$transaction` (`:295`, `:303`, `:350`).
+- **Ineffective per-employee catch.** After a failed statement PostgreSQL aborts the transaction, so the `FAILED` upsert in the `catch` (`:426-457`) cannot succeed for database errors.
+- **File side effects in a transaction.** `generatePayslip` (`:136-167`) writes PDFs to `storage/payslips` from inside the processing transaction (`:597-607`); a rollback leaves the files behind.
+- **YTD includes unapproved work.** `loadYtd` counts `CALCULATED` items (`:114-116`) and computes the year start in server local time (`:102`).
+- **Tax rule details.** `payFrequency` is never consulted; progressive brackets add `flatAmount` per bracket reached (`:36-40`); an unrecognised `paidBy` charges both sides (`:83`).
+- **Notifications outside the transaction.** Admin notifications after calculation (`:496-520`) run after commit and are not retried if they fail.
+
+Exercise: **Goal** make approval safe against a run that is not `PENDING_APPROVAL`. **Check** your change is a conditional `updateMany` inside the transaction at `:534-542` and a `409` when nothing matched.

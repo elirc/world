@@ -84,3 +84,13 @@ Cross-cutting concerns currently present:
 - Keep module-scope mutable state minimal and intentional; prefer explicit factories for complex lifecycle state.
 - For stateful UI files, keep pending/error/success transitions explicit and deterministic.
 - For backend files with side effects, maintain idempotency and transactional coherence to avoid partial writes.
+
+## Verified Review Notes (read against the current source)
+
+- **Secret fallback.** `getAuthSecret()` uses `process.env.AUTH_SECRET` or the constant `"dev_only_replace_me_32_characters_min"` (`:9-12`). With the variable unset, any party can mint a valid `vg_session` JWT.
+- **What the token carries.** `createSessionToken` signs the payload with HS256 and an 8-hour expiry (`:36-42`). `getRequestUser` trusts only `sub` and reloads the user, roles and permissions from the database on each request (`:132-140`), so role changes apply immediately.
+- **Status not enforced.** `normalizeUserContext` copies `user.status` (`:125`) but nothing in this file or in `withRoute` rejects inactive users.
+- **Wildcard admin.** Any role named `PLATFORM_ADMIN` yields the `*` permission (`:109-112`), and `hasPermission` honours `*` (`:156-162`). The check is by role *name*, so an organization-scoped role created with that name would also be a platform admin.
+- **Cookie clearing.** `clearSession` resets only name, value, path and `maxAge` (`:60-69`); it does not repeat `httpOnly`/`secure`, which is harmless for an empty value but inconsistent with `setSession` (`:44-58`).
+
+Exercise: **Goal** reject deactivated users on every request. **Check** `getRequestUser` returns `null` (leading to `401` in `withRoute`) when `user.status` is not active, and you identify the status values from `prisma/schema.prisma`.
